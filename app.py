@@ -45,24 +45,90 @@ st.sidebar.title("Menu")
 page=st.sidebar.radio("Navigation",
 ["Dashboard","Add Customer / Order","View Customers"])
 
-# MEASUREMENT FORM
+
+# MEASUREMENT FORM (EXTENDED ONLY)
 def measurement_form(dress):
+
     data={}
+
     if dress=="Blouse":
         data["Bust"]=st.text_input("Bust")
         data["Waist"]=st.text_input("Waist")
         data["Shoulder"]=st.text_input("Shoulder")
-        data["Sleeve"]=st.text_input("Sleeve Length")
-        data["Length"]=st.text_input("Blouse Length")
+        data["Sleeve Length"]=st.text_input("Sleeve Length")
+        data["Blouse Length"]=st.text_input("Blouse Length")
+        data["Front Neck"]=st.text_input("Front Neck Depth")
+        data["Back Neck"]=st.text_input("Back Neck Depth")
 
     elif dress=="Chudi":
         data["Bust"]=st.text_input("Bust")
         data["Waist"]=st.text_input("Waist")
         data["Hip"]=st.text_input("Hip")
-        data["Top"]=st.text_input("Top Length")
-        data["Bottom"]=st.text_input("Bottom Length")
+        data["Shoulder"]=st.text_input("Shoulder")
+        data["Sleeve Length"]=st.text_input("Sleeve Length")
+        data["Top Length"]=st.text_input("Top Length")
+        data["Bottom Length"]=st.text_input("Bottom Length")
+
+    elif dress=="Saree Blouse":
+        data["Bust"]=st.text_input("Bust")
+        data["Waist"]=st.text_input("Waist")
+        data["Shoulder"]=st.text_input("Shoulder")
+        data["Sleeve Length"]=st.text_input("Sleeve Length")
+        data["Length"]=st.text_input("Length")
+        data["Front Neck"]=st.text_input("Front Neck")
+        data["Back Neck"]=st.text_input("Back Neck")
+
+    elif dress=="Princess Cut Blouse":
+        data["Bust"]=st.text_input("Bust")
+        data["Waist"]=st.text_input("Waist")
+        data["Shoulder"]=st.text_input("Shoulder")
+        data["Length"]=st.text_input("Length")
+        data["Cup Size"]=st.text_input("Cup Size")
+
+    elif dress=="Lehenga":
+        data["Waist"]=st.text_input("Waist")
+        data["Hip"]=st.text_input("Hip")
+        data["Length"]=st.text_input("Lehenga Length")
+        data["Flare"]=st.text_input("Flare")
+
+    elif dress=="Frock":
+        data["Bust"]=st.text_input("Bust")
+        data["Waist"]=st.text_input("Waist")
+        data["Hip"]=st.text_input("Hip")
+        data["Shoulder"]=st.text_input("Shoulder")
+        data["Length"]=st.text_input("Frock Length")
+
+    elif dress=="Nighty":
+        data["Bust"]=st.text_input("Bust")
+        data["Hip"]=st.text_input("Hip")
+        data["Shoulder"]=st.text_input("Shoulder")
+        data["Length"]=st.text_input("Nighty Length")
+
+    elif dress=="Skirt":
+        data["Waist"]=st.text_input("Waist")
+        data["Hip"]=st.text_input("Hip")
+        data["Length"]=st.text_input("Skirt Length")
+
+    elif dress=="Pant":
+        data["Waist"]=st.text_input("Waist")
+        data["Hip"]=st.text_input("Hip")
+        data["Thigh"]=st.text_input("Thigh")
+        data["Knee"]=st.text_input("Knee")
+        data["Length"]=st.text_input("Pant Length")
+
+    elif dress=="Sharara":
+        data["Waist"]=st.text_input("Waist")
+        data["Hip"]=st.text_input("Hip")
+        data["Length"]=st.text_input("Sharara Length")
+
+    elif dress=="Palazzo":
+        data["Waist"]=st.text_input("Waist")
+        data["Hip"]=st.text_input("Hip")
+        data["Length"]=st.text_input("Palazzo Length")
 
     return str(data)
+
+
 
 # DASHBOARD
 if page=="Dashboard":
@@ -122,7 +188,9 @@ if page=="Dashboard":
         """,conn)
         st.dataframe(df,use_container_width=True)
 
-# ADD CUSTOMER
+
+
+# ADD CUSTOMER / ORDER
 elif page=="Add Customer / Order":
 
     st.title("Add Customer / Order")
@@ -151,7 +219,20 @@ elif page=="Add Customer / Order":
         if customer:
 
             dress=st.selectbox(
-            "Dress Type",["Blouse","Chudi"])
+            "Dress Type",
+            [
+            "Blouse",
+            "Chudi",
+            "Saree Blouse",
+            "Princess Cut Blouse",
+            "Lehenga",
+            "Frock",
+            "Nighty",
+            "Skirt",
+            "Pant",
+            "Sharara",
+            "Palazzo"
+            ])
 
             measurement=measurement_form(dress)
 
@@ -184,7 +265,9 @@ elif page=="Add Customer / Order":
                     conn.commit()
                     st.success("Dress Added")
 
-# VIEW CUSTOMERS
+
+
+# VIEW CUSTOMERS (UNCHANGED)
 elif page=="View Customers":
 
     st.title("Customers")
@@ -232,7 +315,6 @@ elif page=="View Customers":
 
             col1,col2,col3=st.columns(3)
 
-            # UPDATE STATUS
             with col1:
 
                 new_status=st.selectbox(
@@ -249,7 +331,6 @@ elif page=="View Customers":
                     conn.commit()
                     st.success("Updated")
 
-            # DELETE ORDER
             with col2:
 
                 if st.button("Delete Order",
@@ -262,7 +343,6 @@ elif page=="View Customers":
                     conn.commit()
                     st.rerun()
 
-            # SMS BUTTON
             with col3:
 
                 msg=f"""
