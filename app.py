@@ -2,11 +2,40 @@ import streamlit as st
 import sqlite3
 import pandas as pd
 import urllib.parse
+from datetime import date
 
-# CONFIG
-st.set_page_config(page_title="Jeyasri Mustard Yellow", layout="wide")
+# ---------------- PAGE CONFIG ----------------
 
-# DATABASE
+st.set_page_config(
+    page_title="Jeyasri Mustard Yellow Boutique",
+    layout="wide"
+)
+
+# ---------------- CUSTOM COLORS ----------------
+
+st.markdown("""
+<style>
+
+.main {
+    background-color: #fffdf5;
+}
+
+.stButton>button {
+    background-color: #f4b400;
+    color: black;
+    border-radius: 8px;
+    font-weight: bold;
+}
+
+.stButton>button:hover {
+    background-color: #e09e00;
+}
+
+</style>
+""", unsafe_allow_html=True)
+
+# ---------------- DATABASE ----------------
+
 conn = sqlite3.connect("boutique.db", check_same_thread=False)
 cursor = conn.cursor()
 
@@ -31,106 +60,146 @@ amount REAL)
 
 conn.commit()
 
-# HEADER
+# ---------------- HEADER ----------------
+
 col1,col2=st.columns([1,4])
+
 with col1:
-    try: st.image("logo.png",width=120)
-    except: pass
+    try:
+        st.image("logo.png",width=120)
+    except:
+        pass
+
 with col2:
-    try: st.image("banner.png",use_container_width=True)
-    except: pass
+    try:
+        st.image("banner.png",use_container_width=True)
+    except:
+        st.title("Jeyasri Mustard Yellow Boutique")
 
-# SIDEBAR
+# ---------------- SIDEBAR ----------------
+
 st.sidebar.title("Menu")
-page=st.sidebar.radio("Navigation",
-["Dashboard","Add Customer / Order","View Customers"])
 
+page=st.sidebar.radio("Navigation",[
+"Dashboard",
+"Add Customer / Order",
+"Today Deliveries",
+"Pending Orders",
+"View Customers"
+])
 
-# MEASUREMENT FORM (EXTENDED ONLY)
-def measurement_form(dress):
+# ---------------- MEASUREMENT AUTO FILL ----------------
+
+def get_old_measurement(customer_id,dress):
+
+    old=cursor.execute("""
+    SELECT measurement FROM orders
+    WHERE customer_id=? AND dress_type=?
+    ORDER BY id DESC LIMIT 1
+    """,(customer_id,dress)).fetchone()
+
+    if old:
+        try:
+            return eval(old[0])
+        except:
+            return {}
+    return {}
+
+def field(label,old,key_prefix=""):
+
+    return st.text_input(
+        label,
+        value=old.get(label,""),
+        key=key_prefix+label
+    )
+
+# ---------------- NEW ORDER MEASUREMENT ----------------
+
+def measurement_form(dress,customer_id):
+
+    old=get_old_measurement(customer_id,dress)
 
     data={}
 
     if dress=="Blouse":
-        data["Bust"]=st.text_input("Bust")
-        data["Waist"]=st.text_input("Waist")
-        data["Shoulder"]=st.text_input("Shoulder")
-        data["Sleeve Length"]=st.text_input("Sleeve Length")
-        data["Blouse Length"]=st.text_input("Blouse Length")
-        data["Front Neck"]=st.text_input("Front Neck Depth")
-        data["Back Neck"]=st.text_input("Back Neck Depth")
+
+        data["Bust"]=field("Bust",old,"new_")
+        data["Waist"]=field("Waist",old,"new_")
+        data["Shoulder"]=field("Shoulder",old,"new_")
+        data["Sleeve"]=field("Sleeve",old,"new_")
+        data["Length"]=field("Length",old,"new_")
+        data["Front Neck"]=field("Front Neck",old,"new_")
+        data["Back Neck"]=field("Back Neck",old,"new_")
 
     elif dress=="Chudi":
-        data["Bust"]=st.text_input("Bust")
-        data["Waist"]=st.text_input("Waist")
-        data["Hip"]=st.text_input("Hip")
-        data["Shoulder"]=st.text_input("Shoulder")
-        data["Sleeve Length"]=st.text_input("Sleeve Length")
-        data["Top Length"]=st.text_input("Top Length")
-        data["Bottom Length"]=st.text_input("Bottom Length")
 
-    elif dress=="Saree Blouse":
-        data["Bust"]=st.text_input("Bust")
-        data["Waist"]=st.text_input("Waist")
-        data["Shoulder"]=st.text_input("Shoulder")
-        data["Sleeve Length"]=st.text_input("Sleeve Length")
-        data["Length"]=st.text_input("Length")
-        data["Front Neck"]=st.text_input("Front Neck")
-        data["Back Neck"]=st.text_input("Back Neck")
-
-    elif dress=="Princess Cut Blouse":
-        data["Bust"]=st.text_input("Bust")
-        data["Waist"]=st.text_input("Waist")
-        data["Shoulder"]=st.text_input("Shoulder")
-        data["Length"]=st.text_input("Length")
-        data["Cup Size"]=st.text_input("Cup Size")
+        data["Bust"]=field("Bust",old,"new_")
+        data["Waist"]=field("Waist",old,"new_")
+        data["Hip"]=field("Hip",old,"new_")
+        data["Shoulder"]=field("Shoulder",old,"new_")
+        data["Sleeve"]=field("Sleeve",old,"new_")
+        data["Top Length"]=field("Top Length",old,"new_")
+        data["Bottom Length"]=field("Bottom Length",old,"new_")
 
     elif dress=="Lehenga":
-        data["Waist"]=st.text_input("Waist")
-        data["Hip"]=st.text_input("Hip")
-        data["Length"]=st.text_input("Lehenga Length")
-        data["Flare"]=st.text_input("Flare")
+
+        data["Waist"]=field("Waist",old,"new_")
+        data["Hip"]=field("Hip",old,"new_")
+        data["Length"]=field("Length",old,"new_")
 
     elif dress=="Frock":
-        data["Bust"]=st.text_input("Bust")
-        data["Waist"]=st.text_input("Waist")
-        data["Hip"]=st.text_input("Hip")
-        data["Shoulder"]=st.text_input("Shoulder")
-        data["Length"]=st.text_input("Frock Length")
 
-    elif dress=="Nighty":
-        data["Bust"]=st.text_input("Bust")
-        data["Hip"]=st.text_input("Hip")
-        data["Shoulder"]=st.text_input("Shoulder")
-        data["Length"]=st.text_input("Nighty Length")
-
-    elif dress=="Skirt":
-        data["Waist"]=st.text_input("Waist")
-        data["Hip"]=st.text_input("Hip")
-        data["Length"]=st.text_input("Skirt Length")
-
-    elif dress=="Pant":
-        data["Waist"]=st.text_input("Waist")
-        data["Hip"]=st.text_input("Hip")
-        data["Thigh"]=st.text_input("Thigh")
-        data["Knee"]=st.text_input("Knee")
-        data["Length"]=st.text_input("Pant Length")
-
-    elif dress=="Sharara":
-        data["Waist"]=st.text_input("Waist")
-        data["Hip"]=st.text_input("Hip")
-        data["Length"]=st.text_input("Sharara Length")
-
-    elif dress=="Palazzo":
-        data["Waist"]=st.text_input("Waist")
-        data["Hip"]=st.text_input("Hip")
-        data["Length"]=st.text_input("Palazzo Length")
+        data["Bust"]=field("Bust",old,"new_")
+        data["Waist"]=field("Waist",old,"new_")
+        data["Length"]=field("Length",old,"new_")
 
     return str(data)
 
+# ---------------- EDIT MEASUREMENT ----------------
 
+def edit_measurement_form(dress,measurement_str):
 
-# DASHBOARD
+    try:
+        old=eval(measurement_str)
+    except:
+        old={}
+
+    data={}
+
+    if dress=="Blouse":
+
+        data["Bust"]=field("Bust",old,"edit_")
+        data["Waist"]=field("Waist",old,"edit_")
+        data["Shoulder"]=field("Shoulder",old,"edit_")
+        data["Sleeve"]=field("Sleeve",old,"edit_")
+        data["Length"]=field("Length",old,"edit_")
+        data["Front Neck"]=field("Front Neck",old,"edit_")
+        data["Back Neck"]=field("Back Neck",old,"edit_")
+
+    elif dress=="Chudi":
+
+        data["Bust"]=field("Bust",old,"edit_")
+        data["Waist"]=field("Waist",old,"edit_")
+        data["Hip"]=field("Hip",old,"edit_")
+        data["Top Length"]=field("Top Length",old,"edit_")
+        data["Bottom Length"]=field("Bottom Length",old,"edit_")
+
+    elif dress=="Lehenga":
+
+        data["Waist"]=field("Waist",old,"edit_")
+        data["Hip"]=field("Hip",old,"edit_")
+        data["Length"]=field("Length",old,"edit_")
+
+    elif dress=="Frock":
+
+        data["Bust"]=field("Bust",old,"edit_")
+        data["Waist"]=field("Waist",old,"edit_")
+        data["Length"]=field("Length",old,"edit_")
+
+    return str(data)
+
+# ---------------- DASHBOARD ----------------
+
 if page=="Dashboard":
 
     st.title("Dashboard")
@@ -144,75 +213,53 @@ if page=="Dashboard":
     pending=cursor.execute(
     "SELECT COUNT(*) FROM orders WHERE status='Pending'").fetchone()[0]
 
-    ready=cursor.execute(
-    "SELECT COUNT(*) FROM orders WHERE status='Ready'").fetchone()[0]
+    today_count=cursor.execute("""
+    SELECT COUNT(*) FROM orders WHERE delivery_date=date('now')
+    """).fetchone()[0]
 
-    stitching=cursor.execute(
-    "SELECT COUNT(*) FROM orders WHERE status='Stitching'").fetchone()[0]
+    revenue=cursor.execute("""
+    SELECT SUM(amount) FROM orders
+    """).fetchone()[0]
 
-    c1,c2,c3,c4,c5=st.columns(5)
+    if revenue is None:
+        revenue=0
 
-    if c1.button(f"Customers\n{total_customers}"):
-        st.session_state.view="customers"
+    c1,c2,c3,c4=st.columns(4)
 
-    if c2.button(f"Orders\n{total_orders}"):
-        st.session_state.view="orders"
+    c1.metric("Customers",total_customers)
+    c2.metric("Orders",total_orders)
+    c3.metric("Pending",pending)
+    c4.metric("Revenue ₹",revenue)
 
-    if c3.button(f"Pending\n{pending}"):
-        st.session_state.view="pending"
+# ---------------- ADD ORDER ----------------
 
-    if c4.button(f"Stitching\n{stitching}"):
-        st.session_state.view="stitching"
-
-    if c5.button(f"Ready\n{ready}"):
-        st.session_state.view="ready"
-
-    view=st.session_state.get("view")
-
-    if view=="customers":
-        st.subheader("Customers Table")
-        search=st.text_input("Search Customer")
-        query="SELECT * FROM customers"
-        if search:
-            query+=f" WHERE name LIKE '%{search}%' OR phone LIKE '%{search}%'"
-        df=pd.read_sql(query,conn)
-        st.dataframe(df,use_container_width=True)
-
-    elif view=="orders":
-        df=pd.read_sql("""
-        SELECT customers.name,customers.phone,
-        orders.dress_type,orders.status,
-        orders.delivery_date,orders.amount
-        FROM orders
-        JOIN customers ON customers.id=orders.customer_id
-        """,conn)
-        st.dataframe(df,use_container_width=True)
-
-
-
-# ADD CUSTOMER / ORDER
 elif page=="Add Customer / Order":
 
     st.title("Add Customer / Order")
 
     phone=st.text_input("Phone Number")
 
-    if phone and len(phone)==10 and phone.isdigit():
+    if phone and len(phone)==10:
 
         customer=cursor.execute(
         "SELECT * FROM customers WHERE phone=?",(phone,)
         ).fetchone()
 
         if customer:
-            st.success(f"Existing Customer: {customer[1]}")
+
+            st.success("Existing Customer: "+customer[1])
             customer_id=customer[0]
 
         else:
+
             name=st.text_input("Customer Name")
+
             if st.button("Create Customer"):
+
                 cursor.execute(
                 "INSERT INTO customers(name,phone) VALUES(?,?)",
                 (name,phone))
+
                 conn.commit()
                 st.rerun()
 
@@ -220,26 +267,17 @@ elif page=="Add Customer / Order":
 
             dress=st.selectbox(
             "Dress Type",
-            [
-            "Blouse",
-            "Chudi",
-            "Saree Blouse",
-            "Princess Cut Blouse",
-            "Lehenga",
-            "Frock",
-            "Nighty",
-            "Skirt",
-            "Pant",
-            "Sharara",
-            "Palazzo"
-            ])
+            ["Blouse","Chudi","Lehenga","Frock"]
+            )
 
-            measurement=measurement_form(dress)
+            measurement=measurement_form(dress,customer_id)
 
             notes=st.text_area("Notes")
 
             status=st.selectbox(
-            "Status",["Pending","Stitching","Ready","Delivered"])
+            "Status",
+            ["Pending","Stitching","Ready","Delivered"]
+            )
 
             delivery=st.date_input("Delivery Date")
 
@@ -247,56 +285,41 @@ elif page=="Add Customer / Order":
 
             if st.button("Add Dress"):
 
-                duplicate=cursor.execute("""
-                SELECT * FROM orders
-                WHERE customer_id=? AND dress_type=? AND delivery_date=?""",
-                (customer_id,dress,str(delivery))).fetchone()
+                cursor.execute("""
+                INSERT INTO orders
+                (customer_id,dress_type,measurement,
+                notes,status,delivery_date,amount)
+                VALUES(?,?,?,?,?,?,?)
+                """,
+                (
+                customer_id,
+                dress,
+                measurement,
+                notes,
+                status,
+                delivery,
+                amount
+                ))
 
-                if duplicate:
-                    st.warning("Duplicate prevented")
+                conn.commit()
 
-                else:
-                    cursor.execute("""
-                    INSERT INTO orders
-                    (customer_id,dress_type,measurement,notes,status,delivery_date,amount)
-                    VALUES(?,?,?,?,?,?,?)""",
-                    (customer_id,dress,measurement,notes,status,delivery,amount))
+                st.success("Dress Added")
 
-                    conn.commit()
-                    st.success("Dress Added")
+# ---------------- VIEW CUSTOMERS WITH EDIT ----------------
 
-
-
-# VIEW CUSTOMERS (UNCHANGED)
 elif page=="View Customers":
 
     st.title("Customers")
 
-    search=st.text_input("Search Customer")
-
-    query="SELECT * FROM customers"
-    if search:
-        query+=f" WHERE name LIKE '%{search}%' OR phone LIKE '%{search}%'"
-
-    customers=pd.read_sql(query,conn)
+    customers=pd.read_sql(
+    "SELECT * FROM customers",
+    conn
+    )
 
     for i,customer in customers.iterrows():
 
         st.subheader(customer["name"])
         st.write(customer["phone"])
-
-        if st.button("Delete Customer",key=f"dc{customer['id']}"):
-
-            cursor.execute(
-            "DELETE FROM orders WHERE customer_id=?",
-            (customer["id"],))
-
-            cursor.execute(
-            "DELETE FROM customers WHERE id=?",
-            (customer["id"],))
-
-            conn.commit()
-            st.rerun()
 
         orders=pd.read_sql(
         f"SELECT * FROM orders WHERE customer_id={customer['id']}",
@@ -305,57 +328,88 @@ elif page=="View Customers":
         for j,order in orders.iterrows():
 
             st.markdown(f"""
-            **Dress:** {order['dress_type']}  
-            **Measurement:** {order['measurement']}  
-            **Notes:** {order['notes']}  
-            **Status:** {order['status']}  
-            **Delivery:** {order['delivery_date']}  
-            **Amount:** ₹{order['amount']}
-            """)
+Dress: {order['dress_type']}  
+Measurement: {order['measurement']}  
+Notes: {order['notes']}  
+Status: {order['status']}  
+Delivery: {order['delivery_date']}  
+Amount: ₹{order['amount']}
+""")
 
-            col1,col2,col3=st.columns(3)
-
-            with col1:
-
-                new_status=st.selectbox(
-                "Update Status",
-                ["Pending","Stitching","Ready","Delivered"],
-                key=f"status{order['id']}")
-
-                if st.button("Update",key=f"update{order['id']}"):
-
-                    cursor.execute(
-                    "UPDATE orders SET status=? WHERE id=?",
-                    (new_status,order["id"]))
-
-                    conn.commit()
-                    st.success("Updated")
-
-            with col2:
-
-                if st.button("Delete Order",
-                key=f"delete{order['id']}"):
-
-                    cursor.execute(
-                    "DELETE FROM orders WHERE id=?",
-                    (order["id"],))
-
-                    conn.commit()
-                    st.rerun()
-
-            with col3:
-
-                msg=f"""
+            msg=f"""
 Dear {customer['name']},
 
 Your {order['dress_type']} is Ready.
-Collect between 10AM - 6PM
 
-Jeyasri Mustard Yellow
+Jeyasri Mustard Yellow Boutique
 """
 
-                sms=f"sms:{customer['phone']}?body={urllib.parse.quote(msg)}"
+            sms=f"sms:{customer['phone']}?body={urllib.parse.quote(msg)}"
 
+            col1,col2=st.columns(2)
+
+            with col1:
                 st.link_button("Send SMS",sms)
 
-        st.divider()
+            with col2:
+                if st.button("Edit Order",key="edit"+str(order["id"])):
+                    st.session_state.edit_id=order["id"]
+
+            if st.session_state.get("edit_id")==order["id"]:
+
+                st.subheader("Edit Order")
+
+                new_measurement=edit_measurement_form(
+                    order["dress_type"],
+                    order["measurement"]
+                )
+
+                new_notes=st.text_area(
+                    "Edit Notes",
+                    value=order["notes"]
+                )
+
+                new_status=st.selectbox(
+                    "Edit Status",
+                    ["Pending","Stitching","Ready","Delivered"]
+                )
+
+                new_amount=st.number_input(
+                    "Edit Amount",
+                    value=float(order["amount"])
+                )
+
+                new_delivery=st.date_input(
+                    "Edit Delivery",
+                    value=pd.to_datetime(order["delivery_date"])
+                )
+
+                if st.button("Save Changes",key="save"+str(order["id"])):
+
+                    cursor.execute("""
+                    UPDATE orders SET
+                    measurement=?,
+                    notes=?,
+                    status=?,
+                    amount=?,
+                    delivery_date=?
+                    WHERE id=?
+                    """,
+                    (
+                    new_measurement,
+                    new_notes,
+                    new_status,
+                    new_amount,
+                    new_delivery,
+                    order["id"]
+                    ))
+
+                    conn.commit()
+
+                    st.success("Updated Successfully")
+
+                    del st.session_state.edit_id
+
+                    st.rerun()
+
+            st.divider()
