@@ -11,11 +11,10 @@ st.set_page_config(
     layout="wide"
 )
 
-# ---------------- CUSTOM THEME ----------------
+# ---------------- CUSTOM COLORS ----------------
 
 st.markdown("""
 <style>
-
 .main {
 background-color:#fffdf5;
 }
@@ -25,26 +24,19 @@ background-color:#f4b400;
 color:black;
 border-radius:8px;
 font-weight:bold;
+height:60px;
 }
 
 .stButton>button:hover {
 background-color:#e09e00;
 }
-
 </style>
 """, unsafe_allow_html=True)
 
-# ---------------- DATABASE SAFE CONNECT ----------------
+# ---------------- DATABASE ----------------
 
-try:
-    conn = sqlite3.connect("boutique.db", check_same_thread=False)
-    cursor = conn.cursor()
-
-except Exception as e:
-    st.error("Database connection failed")
-    st.stop()
-
-# ---------------- CREATE TABLES SAFE ----------------
+conn = sqlite3.connect("boutique.db", check_same_thread=False)
+cursor = conn.cursor()
 
 cursor.execute("""
 CREATE TABLE IF NOT EXISTS customers(
@@ -75,7 +67,7 @@ with col1:
     try:
         st.image("logo.png",width=120)
     except:
-        st.write("")
+        pass
 
 with col2:
     try:
@@ -95,33 +87,25 @@ page=st.sidebar.radio("Navigation",[
 "View Customers"
 ])
 
-# ---------------- MEASUREMENT AUTO FILL ----------------
+# ---------------- MEASUREMENT ----------------
 
 def get_old_measurement(customer_id,dress):
 
-    try:
-        old=cursor.execute("""
-        SELECT measurement FROM orders
-        WHERE customer_id=? AND dress_type=?
-        ORDER BY id DESC LIMIT 1
-        """,(customer_id,dress)).fetchone()
+    old=cursor.execute("""
+    SELECT measurement FROM orders
+    WHERE customer_id=? AND dress_type=?
+    ORDER BY id DESC LIMIT 1
+    """,(customer_id,dress)).fetchone()
 
-        if old:
+    if old:
+        try:
             return eval(old[0])
-    except:
-        pass
-
+        except:
+            return {}
     return {}
 
 def field(label,old,key):
-
-    return st.text_input(
-        label,
-        value=old.get(label,""),
-        key=key
-    )
-
-# ---------------- MEASUREMENT FORM ----------------
+    return st.text_input(label,value=old.get(label,""),key=key)
 
 def measurement_form(dress,customer_id):
 
@@ -131,33 +115,30 @@ def measurement_form(dress,customer_id):
 
     if dress=="Blouse":
 
-        data["Bust"]=field("Bust",old,"new_bust")
-        data["Waist"]=field("Waist",old,"new_waist")
-        data["Shoulder"]=field("Shoulder",old,"new_shoulder")
-        data["Sleeve"]=field("Sleeve",old,"new_sleeve")
-        data["Length"]=field("Length",old,"new_length")
-        data["Front Neck"]=field("Front Neck",old,"new_fn")
-        data["Back Neck"]=field("Back Neck",old,"new_bn")
+        data["Bust"]=field("Bust",old,"b1")
+        data["Waist"]=field("Waist",old,"b2")
+        data["Shoulder"]=field("Shoulder",old,"b3")
+        data["Sleeve"]=field("Sleeve",old,"b4")
+        data["Length"]=field("Length",old,"b5")
 
     elif dress=="Chudi":
 
-        data["Bust"]=field("Bust",old,"new_cb")
-        data["Waist"]=field("Waist",old,"new_cw")
-        data["Hip"]=field("Hip",old,"new_ch")
-        data["Top Length"]=field("Top Length",old,"new_ctl")
-        data["Bottom Length"]=field("Bottom Length",old,"new_cbl")
+        data["Bust"]=field("Bust",old,"c1")
+        data["Waist"]=field("Waist",old,"c2")
+        data["Hip"]=field("Hip",old,"c3")
+        data["Top Length"]=field("Top Length",old,"c4")
 
     elif dress=="Lehenga":
 
-        data["Waist"]=field("Waist",old,"new_lw")
-        data["Hip"]=field("Hip",old,"new_lh")
-        data["Length"]=field("Length",old,"new_ll")
+        data["Waist"]=field("Waist",old,"l1")
+        data["Hip"]=field("Hip",old,"l2")
+        data["Length"]=field("Length",old,"l3")
 
     elif dress=="Frock":
 
-        data["Bust"]=field("Bust",old,"new_fb")
-        data["Waist"]=field("Waist",old,"new_fw")
-        data["Length"]=field("Length",old,"new_fl")
+        data["Bust"]=field("Bust",old,"f1")
+        data["Waist"]=field("Waist",old,"f2")
+        data["Length"]=field("Length",old,"f3")
 
     return str(data)
 
@@ -188,13 +169,66 @@ if page=="Dashboard":
     if revenue is None:
         revenue=0
 
+    # METRICS
     c1,c2,c3,c4,c5=st.columns(5)
 
-    c1.metric("Customers",total_customers)
-    c2.metric("Orders",total_orders)
-    c3.metric("Pending",pending)
-    c4.metric("Ready",ready)
-    c5.metric("Revenue ₹",revenue)
+    if c1.button(f"Customers\n{total_customers}"):
+        st.session_state.view="customers"
+
+    if c2.button(f"Orders\n{total_orders}"):
+        st.session_state.view="orders"
+
+    if c3.button(f"Pending\n{pending}"):
+        st.session_state.view="pending"
+
+    if c4.button(f"Stitching\n{stitching}"):
+        st.session_state.view="stitching"
+
+    if c5.button(f"Ready\n{ready}"):
+        st.session_state.view="ready"
+
+    view=st.session_state.get("view")
+
+    if view=="customers":
+
+        df=pd.read_sql("SELECT * FROM customers",conn)
+        st.dataframe(df,use_container_width=True)
+
+    elif view=="orders":
+
+        df=pd.read_sql("""
+        SELECT customers.name,customers.phone,
+        orders.dress_type,orders.status,
+        orders.delivery_date,orders.amount
+        FROM orders
+        JOIN customers ON customers.id=orders.customer_id
+        """,conn)
+
+        st.dataframe(df,use_container_width=True)
+
+    elif view=="pending":
+
+        df=pd.read_sql("""
+        SELECT * FROM orders WHERE status='Pending'
+        """,conn)
+
+        st.dataframe(df)
+
+    elif view=="stitching":
+
+        df=pd.read_sql("""
+        SELECT * FROM orders WHERE status='Stitching'
+        """,conn)
+
+        st.dataframe(df)
+
+    elif view=="ready":
+
+        df=pd.read_sql("""
+        SELECT * FROM orders WHERE status='Ready'
+        """,conn)
+
+        st.dataframe(df)
 
 # ---------------- ADD ORDER ----------------
 
@@ -207,8 +241,8 @@ elif page=="Add Customer / Order":
     if phone and len(phone)==10:
 
         customer=cursor.execute(
-        "SELECT * FROM customers WHERE phone=?",
-        (phone,)).fetchone()
+        "SELECT * FROM customers WHERE phone=?",(phone,)
+        ).fetchone()
 
         if customer:
 
@@ -226,20 +260,23 @@ elif page=="Add Customer / Order":
                 (name,phone))
 
                 conn.commit()
-
                 st.rerun()
 
         if customer:
 
-            dress=st.selectbox("Dress Type",
-            ["Blouse","Chudi","Lehenga","Frock"])
+            dress=st.selectbox(
+            "Dress Type",
+            ["Blouse","Chudi","Lehenga","Frock"]
+            )
 
             measurement=measurement_form(dress,customer_id)
 
             notes=st.text_area("Notes")
 
-            status=st.selectbox("Status",
-            ["Pending","Stitching","Ready","Delivered"])
+            status=st.selectbox(
+            "Status",
+            ["Pending","Stitching","Ready","Delivered"]
+            )
 
             delivery=st.date_input("Delivery Date")
 
@@ -259,83 +296,6 @@ elif page=="Add Customer / Order":
                 conn.commit()
 
                 st.success("Order Added")
-
-# ---------------- VIEW CUSTOMERS ----------------
-
-elif page=="View Customers":
-
-    st.title("Customers")
-
-    customers=pd.read_sql(
-    "SELECT * FROM customers",
-    conn)
-
-    for i,customer in customers.iterrows():
-
-        st.subheader(customer["name"])
-        st.write(customer["phone"])
-
-        orders=pd.read_sql(
-        f"SELECT * FROM orders WHERE customer_id={customer['id']}",
-        conn)
-
-        for j,order in orders.iterrows():
-
-            st.markdown(f"""
-Dress: {order['dress_type']}  
-Measurement: {order['measurement']}  
-Notes: {order['notes']}  
-Status: {order['status']}  
-Delivery: {order['delivery_date']}  
-Amount: ₹{order['amount']}
-""")
-
-            col1,col2,col3=st.columns(3)
-
-            # UPDATE STATUS
-            with col1:
-
-                new_status=st.selectbox(
-                "Update Status",
-                ["Pending","Stitching","Ready","Delivered"],
-                key="status"+str(order["id"]))
-
-                if st.button("Update",key="update"+str(order["id"])):
-
-                    cursor.execute(
-                    "UPDATE orders SET status=? WHERE id=?",
-                    (new_status,order["id"]))
-
-                    conn.commit()
-
-                    st.success("Status Updated")
-
-                    st.rerun()
-
-            # EDIT ORDER
-            with col2:
-
-                if st.button("Edit Order",
-                key="edit"+str(order["id"])):
-
-                    st.session_state.edit_id=order["id"]
-
-            # SMS
-            with col3:
-
-                msg=f"""
-Dear {customer['name']},
-
-Your {order['dress_type']} is Ready.
-
-Jeyasri Mustard Yellow Boutique
-"""
-
-                sms=f"sms:{customer['phone']}?body={urllib.parse.quote(msg)}"
-
-                st.link_button("Send SMS",sms)
-
-            st.divider()
 
 # ---------------- TODAY DELIVERY ----------------
 
@@ -370,3 +330,49 @@ elif page=="Pending Orders":
     """,conn)
 
     st.dataframe(df,use_container_width=True)
+
+# ---------------- VIEW CUSTOMERS ----------------
+
+elif page=="View Customers":
+
+    st.title("Customers")
+
+    customers=pd.read_sql("SELECT * FROM customers",conn)
+
+    for i,customer in customers.iterrows():
+
+        st.subheader(customer["name"])
+        st.write(customer["phone"])
+
+        orders=pd.read_sql(
+        f"SELECT * FROM orders WHERE customer_id={customer['id']}",
+        conn)
+
+        for j,order in orders.iterrows():
+
+            st.write(order["dress_type"],
+            order["status"],
+            order["delivery_date"],
+            order["amount"])
+
+            new_status=st.selectbox(
+            "Update Status",
+            ["Pending","Stitching","Ready","Delivered"],
+            key="s"+str(order["id"]))
+
+            if st.button("Update",key="u"+str(order["id"])):
+
+                cursor.execute(
+                "UPDATE orders SET status=? WHERE id=?",
+                (new_status,order["id"]))
+
+                conn.commit()
+                st.rerun()
+
+            msg=f"Your {order['dress_type']} is Ready"
+
+            sms=f"sms:{customer['phone']}?body={urllib.parse.quote(msg)}"
+
+            st.link_button("Send SMS",sms)
+
+            st.divider()
